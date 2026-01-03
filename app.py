@@ -95,18 +95,18 @@ if main_page == "Global Dashboard":
         st.plotly_chart(fig_risk, use_container_width=True)
 
     with tab3:
-    st.subheader("Correlation Matrix")
-    st.markdown("Statistical relationship between daily returns. **1.00** indicates perfect synchronization.")
+        st.subheader("Correlation Matrix")
+        st.markdown("Statistical relationship between daily returns. **1.00** indicates perfect synchronization.")
     
-    corr_matrix = returns.corr()
+        corr_matrix = returns.corr()
     
-    fig_corr = px.imshow(corr_matrix, 
+        fig_corr = px.imshow(corr_matrix, 
                          text_auto=".2f", 
                          color_continuous_scale='RdYlGn', 
                          template="plotly_dark",
                          aspect="equal") # Forza la forma quadrata
 
-    fig_corr.update_layout(
+        fig_corr.update_layout(
         height=750, # Ancora più grande per risaltare nel portfolio
         margin=dict(l=20, r=20, t=30, b=20),
         coloraxis_colorbar=dict(
@@ -116,14 +116,14 @@ if main_page == "Global Dashboard":
             x=0.80, # AVVICINA la scala quasi a ridosso del quadrato
             xanchor="left",
             ticks="outside"
+            )
         )
-    )
     
     # Pulizia assi per look minimale
-    fig_corr.update_xaxes(showgrid=False)
-    fig_corr.update_yaxes(showgrid=False)
+        fig_corr.update_xaxes(showgrid=False)
+        fig_corr.update_yaxes(showgrid=False)
     
-    st.plotly_chart(fig_corr, use_container_width=True)
+        st.plotly_chart(fig_corr, use_container_width=True)
 
 # --- PAGINA 2: TECHNICAL DEEP-DIVE ---
 else:
