@@ -94,7 +94,7 @@ if main_page == "Global Dashboard":
                                yaxis_title="Reward (Annualized Return %)")
         st.plotly_chart(fig_risk, use_container_width=True)
 
-with tab3:
+    with tab3:
     st.subheader("Correlation Matrix")
     st.markdown("Statistical relationship between daily returns. **1.00** indicates perfect synchronization.")
     
