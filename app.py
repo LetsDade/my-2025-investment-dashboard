@@ -43,13 +43,14 @@ st.sidebar.header("Terminal Controls")
 page = st.sidebar.radio("Select View:", ["Market Overview", "Risk-Reward Analysis", "Technical Deep-Dive"])
 selected_stock = st.sidebar.selectbox("Focus Stock:", prices.columns)
 
-# --- STEP 2: CALCOLO METRICHE AVANZATE ---
-# Calcoliamo Rendimento Annualizzato e Volatilità Annualizzata (252 giorni lavorativi)
+# --- STEP 2: CALCOLO METRICHE AVANZATE (FIXED) ---
 annualized_return = returns.mean() * 252 * 100
 annualized_vol = returns.std() * np.sqrt(252) * 100
+
+# Calcolo Sharpe Ratio
 sharpe_ratio = annualized_return / annualized_vol
 
-# Creiamo un DataFrame per le metriche
+# Creiamo il DataFrame e PULIAMO i dati
 risk_df = pd.DataFrame({
     'Ticker': annualized_return.index,
     'Annualized Return (%)': annualized_return.values,
@@ -57,53 +58,47 @@ risk_df = pd.DataFrame({
     'Sharpe Ratio': sharpe_ratio.values
 })
 
+# FIX: Gestione valori negativi o NaN per la dimensione delle bolle
+# Creiamo una colonna specifica per la dimensione che sia sempre positiva e non nulla
+risk_df['Bubble_Size'] = risk_df['Sharpe Ratio'].apply(lambda x: max(x, 0.1) if pd.notnull(x) else 0.1)
+# Rimuoviamo eventuali righe con valori infiniti o NaN
+risk_df = risk_df.replace([np.inf, -np.inf], np.nan).dropna()
+
 # --- INTERFACCIA A SCHEDE (TABS) ---
 tab1, tab2, tab3 = st.tabs(["📊 Performance Overview", "⚖️ Risk-Reward Analysis", "🧩 Correlation Matrix"])
 
 with tab1:
     st.subheader("Cumulative Growth of $100 in 2025")
-    # Normalizzazione per coerenza visiva
     normalized_prices = (prices / prices.iloc[0] * 100)
     fig_line = px.line(normalized_prices, 
                        template="plotly_dark",
                        color_discrete_sequence=px.colors.qualitative.Prism)
-    fig_line.update_layout(hovermode="x unified", yaxis_title="Normalized Price (Base 100)",
-                          plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    fig_line.update_layout(hovermode="x unified", yaxis_title="Normalized Price (Base 100)")
     st.plotly_chart(fig_line, use_container_width=True)
 
 with tab2:
     st.subheader("2025 Risk vs. Reward Profile")
-    st.markdown("This scatter plot compares the total return against the volatility (risk). "
-                "The size of the bubble represents the **Sharpe Ratio** (Efficiency).")
+    st.markdown("Bubble size represents the **Sharpe Ratio** (Efficiency).")
     
-    # Scatter plot: Coerenza con il Deep Blue per i punti
+    # FIX: Usiamo 'Bubble_Size' per il parametro size
     fig_risk = px.scatter(risk_df, 
                           x='Annualized Volatility (%)', 
                           y='Annualized Return (%)',
-                          size='Sharpe Ratio', 
+                          size='Bubble_Size', # Ora è sicuro!
                           text='Ticker',
                           color='Annualized Return (%)',
-                          color_continuous_scale='Blues', # Coerenza con Task 2 e 10
-                          template="plotly_dark")
+                          color_continuous_scale='Blues',
+                          template="plotly_dark",
+                          hover_data=['Sharpe Ratio']) # Mostriamo comunque il valore reale nel tooltip
     
     fig_risk.update_traces(textposition='top center', marker=dict(line=dict(width=1, color='white')))
-    fig_risk.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig_risk, use_container_width=True)
 
 with tab3:
     st.subheader("Sector Correlation Matrix")
-    st.markdown("How much do these stocks move together? 1.0 = Perfect correlation.")
-    
     corr_matrix = returns.corr()
-    
-    # Heatmap coerente con il Task 6 (RdYlGn o Blues)
-    fig_corr = px.imshow(corr_matrix, 
-                         text_auto=".2f", 
-                         aspect="auto",
-                         color_continuous_scale='RdYlGn', # Standard finanziario
-                         template="plotly_dark")
+    fig_corr = px.imshow(corr_matrix, text_auto=".2f", color_continuous_scale='RdYlGn', template="plotly_dark")
     st.plotly_chart(fig_corr, use_container_width=True)
-
 # --- STEP 3: TECHNICAL DEEP-DIVE (CANDLESTICK + SMA) ---
 if page == "Technical Deep-Dive":
     st.subheader(f"Technical Analysis: {selected_stock} (Full Year 2025)")
