@@ -16,7 +16,7 @@ def load_financial_data():
     tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA"]
     
     # Download dati 2025
-    raw_data = yf.download(tickers, start="2025-01-01", end="2025-12-31")
+    raw_data = yf.download(tickers, start="2024-12-01", end="2025-12-31")
     
     # Estrazione Close Price con gestione MultiIndex
     if isinstance(raw_data.columns, pd.MultiIndex):
@@ -48,6 +48,9 @@ selected_stock = st.sidebar.selectbox("Focus Stock Analysis:", prices.columns.to
 
 # --- PAGINA 1: GLOBAL DASHBOARD ---
 if main_page == "Global Dashboard":
+    # Filtriamo i dati per mostrare SOLO il 2025 nei tab generali
+    prices_2025 = prices.loc["2025-01-01":]
+    returns_2025 = returns.loc["2025-01-01":]
     tab1, tab2, tab3 = st.tabs(["Performance Overview", "Risk-Reward Profile", "Correlation Matrix"])
 
     with tab1:
@@ -107,12 +110,12 @@ if main_page == "Global Dashboard":
                          aspect="equal") # Forza la forma quadrata
 
         fig_corr.update_layout(
-        height=750, # Ancora più grande per risaltare nel portfolio
+        height=650, # Ancora più grande per risaltare nel portfolio
         margin=dict(l=20, r=20, t=30, b=20),
         coloraxis_colorbar=dict(
             title="Correlation",
             thicknessmode="pixels", thickness=20,
-            lenmode="fraction", len=0.7,
+            lenmode="fraction", len=0.8,
             x=0.80, # AVVICINA la scala quasi a ridosso del quadrato
             xanchor="left",
             ticks="outside"
