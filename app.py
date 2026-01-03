@@ -99,7 +99,7 @@ if main_page == "Global Dashboard":
 
     with tab3:
         st.subheader("Correlation Matrix")
-        st.markdown("Statistical relationship between daily returns. **1.00** indicates perfect synchronization.")
+        st.markdown("Statistical relationship between daily returns.")
     
         corr_matrix = returns.corr()
     
