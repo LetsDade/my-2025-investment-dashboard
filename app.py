@@ -9,31 +9,25 @@ import plotly.express as px
 st.set_page_config(page_title="2025 Financial Terminal", layout="wide")
 st.title("🚀 2025 AI-Sector Alpha Terminal")
 
-# --- STEP 1: DATA ENGINE (EXTRA ROBUST) ---
+# --- STEP 1: MOTORE DATI (VERIFICATO) ---
 @st.cache_data
 def load_financial_data():
-    # Definiamo i ticker e forziamo l'ordine
+    # Elenco esatto delle Magnifiche 7
     tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA"]
     
-    # Scarichiamo i dati reali 2025
+    # Download dati 2025
     raw_data = yf.download(tickers, start="2025-01-01", end="2025-12-31")
     
-    # Estrazione prezzi di chiusura
+    # Estrazione Close Price con gestione MultiIndex
     if isinstance(raw_data.columns, pd.MultiIndex):
         prices = raw_data['Close'].copy()
     else:
         prices = raw_data.copy()
     
-    # FORZATURA: Assicuriamoci di avere tutte le colonne richieste
-    # Se un ticker manca, yfinance lo avrà messo come colonna di NaN, noi lo vogliamo vedere
-    for t in tickers:
-        if t not in prices.columns:
-            prices[t] = np.nan
-            
-    # Riordiniamo le colonne secondo la nostra lista
-    prices = prices[tickers]
+    # Assicuriamoci che tutte le colonne siano presenti e nell'ordine corretto
+    prices = prices.reindex(columns=tickers)
     
-    # Pulizia dati per evitare grafici vuoti
+    # Pulizia dati: riempimento buchi e calcolo rendimenti
     prices = prices.ffill().bfill() 
     returns = prices.pct_change().fillna(0)
     
@@ -41,15 +35,16 @@ def load_financial_data():
 
 try:
     prices, returns, full_data = load_financial_data()
-    st.sidebar.success(f"✅ Loaded {len(prices.columns)} Assets")
+    # Verifica immediata nella sidebar
+    st.sidebar.success(f"✅ Assets Loaded: {', '.join(prices.columns)}")
 except Exception as e:
-    st.error(f"Failed to load data: {e}")
+    st.error(f"Errore nel caricamento: {e}")
     st.stop()
 
-# --- SIDEBAR ---
+# --- SIDEBAR NAVIGATION ---
 st.sidebar.header("Terminal Navigation")
 main_page = st.sidebar.radio("Select View:", ["Global Dashboard", "Technical Deep-Dive"])
-selected_stock = st.sidebar.selectbox("Select Focus Stock:", prices.columns.tolist())
+selected_stock = st.sidebar.selectbox("Focus Stock Analysis:", prices.columns.tolist())
 
 # --- PAGINA 1: GLOBAL DASHBOARD ---
 if main_page == "Global Dashboard":
@@ -59,14 +54,13 @@ if main_page == "Global Dashboard":
         st.subheader("Cumulative Growth of $100 in 2025")
         norm_prices = (prices / prices.iloc[0] * 100)
         fig_line = px.line(norm_prices, template="plotly_dark",
-                           labels={'value': 'Normalized Price', 'Date': '2025 Timeline'},
                            color_discrete_sequence=px.colors.qualitative.Prism)
-        fig_line.update_layout(hovermode="x unified")
+        fig_line.update_layout(hovermode="x unified", yaxis_title="Value ($)")
         st.plotly_chart(fig_line, use_container_width=True)
 
     with tab2:
         st.subheader("2025 Risk vs. Reward")
-        st.markdown("Bubble size and color represent the **Sharpe Ratio** (Investment Efficiency).")
+        st.markdown("Bubble size represents the **Sharpe Ratio** (Investment Efficiency). Axes show the Risk-Return tradeoff.")
         
         # Calcolo metriche annualizzate
         ann_ret = returns.mean() * 252 * 100
@@ -80,21 +74,24 @@ if main_page == "Global Dashboard":
             'Sharpe Ratio': sharpe.values
         }).dropna()
         
-        # Dimensione bolla sicura
-        risk_df['Bubble_Size'] = risk_df['Sharpe Ratio'].apply(lambda x: float(max(x, 0.1)) if pd.notnull(x) else 0.1)
+        # Dimensione bolla (sempre positiva per evitare errori grafici)
+        risk_df['Size'] = risk_df['Sharpe Ratio'].apply(lambda x: float(max(x, 0.1)))
 
-        # FIX: Colore mappato su Sharpe Ratio invece che su Return
+        # GRAFICO SEMPLIFICATO: Colore fisso Deep Blue del portfolio
         fig_risk = px.scatter(risk_df, 
                               x='Volatility (%)', 
                               y='Return (%)',
-                              size='Bubble_Size', 
-                              text='Ticker', 
-                              color='Sharpe Ratio', # Cambiato da Return a Sharpe Ratio
-                              color_continuous_scale='Blues', 
+                              size='Size', 
+                              text='Ticker',
                               template="plotly_dark",
-                              hover_data=['Return (%)', 'Volatility (%)'])
+                              hover_data=['Sharpe Ratio'])
         
-        fig_risk.update_traces(textposition='top center')
+        # Colore coerente con il resto del portfolio (#084594)
+        fig_risk.update_traces(marker=dict(color='#084594', line=dict(width=1, color='white')), 
+                               textposition='top center')
+        
+        fig_risk.update_layout(xaxis_title="Risk (Annualized Volatility %)", 
+                               yaxis_title="Reward (Annualized Return %)")
         st.plotly_chart(fig_risk, use_container_width=True)
 
     with tab3:
@@ -107,14 +104,12 @@ if main_page == "Global Dashboard":
 # --- PAGINA 2: TECHNICAL DEEP-DIVE ---
 else:
     st.subheader(f"Technical Analysis: {selected_stock}")
-    
     df_tick = pd.DataFrame({
         'Open': full_data['Open'][selected_stock],
         'High': full_data['High'][selected_stock],
         'Low': full_data['Low'][selected_stock],
         'Close': full_data['Close'][selected_stock]
     }).ffill()
-    
     df_tick['SMA20'] = df_tick['Close'].rolling(window=20).mean()
 
     fig_candle = go.Figure()
@@ -127,4 +122,4 @@ else:
     st.plotly_chart(fig_candle, use_container_width=True)
 
 st.divider()
-st.caption("Data Source: Yahoo Finance API. Portfolio Final Task - Verified Version.")
+st.caption("Final Data: Verified real-market performance (Jan-Dec 2025). Built with yfinance.")
