@@ -7,7 +7,7 @@ import plotly.express as px
 
 # 1. Configurazione Pagina
 st.set_page_config(page_title="2025 Financial Terminal", layout="wide")
-st.title("🚀 2025 AI-Sector Alpha Terminal")
+st.title("2025 Magnificent Seven: Equity Performance & Risk Analysis")
 
 # --- STEP 1: MOTORE DATI (VERIFICATO) ---
 @st.cache_data
@@ -48,7 +48,7 @@ selected_stock = st.sidebar.selectbox("Focus Stock Analysis:", prices.columns.to
 
 # --- PAGINA 1: GLOBAL DASHBOARD ---
 if main_page == "Global Dashboard":
-    tab1, tab2, tab3 = st.tabs(["📊 Performance Overview", "⚖️ Risk-Reward Profile", "🧩 Correlation Matrix"])
+    tab1, tab2, tab3 = st.tabs(["Performance Overview", "Risk-Reward Profile", "Correlation Matrix"])
 
     with tab1:
         st.subheader("Cumulative Growth of $100 in 2025")
@@ -59,7 +59,7 @@ if main_page == "Global Dashboard":
         st.plotly_chart(fig_line, use_container_width=True)
 
     with tab2:
-        st.subheader("2025 Risk vs. Reward")
+        st.subheader("Risk vs. Reward")
         st.markdown("Bubble size represents the **Sharpe Ratio** (Investment Efficiency). Axes show the Risk-Return tradeoff.")
         
         # Calcolo metriche annualizzate
@@ -94,12 +94,36 @@ if main_page == "Global Dashboard":
                                yaxis_title="Reward (Annualized Return %)")
         st.plotly_chart(fig_risk, use_container_width=True)
 
-    with tab3:
-        st.subheader("Sector Correlation Matrix")
-        corr_matrix = returns.corr()
-        fig_corr = px.imshow(corr_matrix, text_auto=".2f", 
-                             color_continuous_scale='RdYlGn', template="plotly_dark")
-        st.plotly_chart(fig_corr, use_container_width=True)
+with tab3:
+    st.subheader("Correlation Matrix")
+    st.markdown("Statistical relationship between daily returns. **1.00** indicates perfect synchronization.")
+    
+    corr_matrix = returns.corr()
+    
+    fig_corr = px.imshow(corr_matrix, 
+                         text_auto=".2f", 
+                         color_continuous_scale='RdYlGn', 
+                         template="plotly_dark",
+                         aspect="equal") # Forza la forma quadrata
+
+    fig_corr.update_layout(
+        height=750, # Ancora più grande per risaltare nel portfolio
+        margin=dict(l=20, r=20, t=30, b=20),
+        coloraxis_colorbar=dict(
+            title="Correlation",
+            thicknessmode="pixels", thickness=20,
+            lenmode="fraction", len=0.7,
+            x=0.80, # AVVICINA la scala quasi a ridosso del quadrato
+            xanchor="left",
+            ticks="outside"
+        )
+    )
+    
+    # Pulizia assi per look minimale
+    fig_corr.update_xaxes(showgrid=False)
+    fig_corr.update_yaxes(showgrid=False)
+    
+    st.plotly_chart(fig_corr, use_container_width=True)
 
 # --- PAGINA 2: TECHNICAL DEEP-DIVE ---
 else:
@@ -118,8 +142,20 @@ else:
     fig_candle.add_trace(go.Scatter(x=df_tick.index, y=df_tick['SMA20'], 
                          line=dict(color='#084594', width=2), name='SMA 20'))
     
-    fig_candle.update_layout(template="plotly_dark", xaxis_rangeslider_visible=False, height=600)
+    # --- UPDATE: TECHNICAL DEEP-DIVE LAYOUT ---
+    fig_candle.update_layout(
+        template="plotly_dark",
+        xaxis_rangeslider_visible=False, 
+        height=650,
+        # Aggiunta etichette assi
+        xaxis_title="2025 Trading Timeline",
+        yaxis_title="Stock Price (USD)",
+        # Aumento margini per far spazio alle etichette
+        margin=dict(l=60, r=20, t=50, b=60),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        font=dict(size=12)
+    )
     st.plotly_chart(fig_candle, use_container_width=True)
 
 st.divider()
-st.caption("Final Data: Verified real-market performance (Jan-Dec 2025). Built with yfinance.")
+st.caption("Market performance (Jan-Dec 2025). Built with yfinance.")
