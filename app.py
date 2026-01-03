@@ -42,3 +42,126 @@ prices, returns, full_data = load_financial_data()
 st.sidebar.header("Terminal Controls")
 page = st.sidebar.radio("Select View:", ["Market Overview", "Risk-Reward Analysis", "Technical Deep-Dive"])
 selected_stock = st.sidebar.selectbox("Focus Stock:", prices.columns)
+
+# --- STEP 2: CALCOLO METRICHE AVANZATE ---
+# Calcoliamo Rendimento Annualizzato e Volatilità Annualizzata (252 giorni lavorativi)
+annualized_return = returns.mean() * 252 * 100
+annualized_vol = returns.std() * np.sqrt(252) * 100
+sharpe_ratio = annualized_return / annualized_vol
+
+# Creiamo un DataFrame per le metriche
+risk_df = pd.DataFrame({
+    'Ticker': annualized_return.index,
+    'Annualized Return (%)': annualized_return.values,
+    'Annualized Volatility (%)': annualized_vol.values,
+    'Sharpe Ratio': sharpe_ratio.values
+})
+
+# --- INTERFACCIA A SCHEDE (TABS) ---
+tab1, tab2, tab3 = st.tabs(["📊 Performance Overview", "⚖️ Risk-Reward Analysis", "🧩 Correlation Matrix"])
+
+with tab1:
+    st.subheader("Cumulative Growth of $100 in 2025")
+    # Normalizzazione per coerenza visiva
+    normalized_prices = (prices / prices.iloc[0] * 100)
+    fig_line = px.line(normalized_prices, 
+                       template="plotly_dark",
+                       color_discrete_sequence=px.colors.qualitative.Prism)
+    fig_line.update_layout(hovermode="x unified", yaxis_title="Normalized Price (Base 100)",
+                          plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    st.plotly_chart(fig_line, use_container_width=True)
+
+with tab2:
+    st.subheader("2025 Risk vs. Reward Profile")
+    st.markdown("This scatter plot compares the total return against the volatility (risk). "
+                "The size of the bubble represents the **Sharpe Ratio** (Efficiency).")
+    
+    # Scatter plot: Coerenza con il Deep Blue per i punti
+    fig_risk = px.scatter(risk_df, 
+                          x='Annualized Volatility (%)', 
+                          y='Annualized Return (%)',
+                          size='Sharpe Ratio', 
+                          text='Ticker',
+                          color='Annualized Return (%)',
+                          color_continuous_scale='Blues', # Coerenza con Task 2 e 10
+                          template="plotly_dark")
+    
+    fig_risk.update_traces(textposition='top center', marker=dict(line=dict(width=1, color='white')))
+    fig_risk.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    st.plotly_chart(fig_risk, use_container_width=True)
+
+with tab3:
+    st.subheader("Sector Correlation Matrix")
+    st.markdown("How much do these stocks move together? 1.0 = Perfect correlation.")
+    
+    corr_matrix = returns.corr()
+    
+    # Heatmap coerente con il Task 6 (RdYlGn o Blues)
+    fig_corr = px.imshow(corr_matrix, 
+                         text_auto=".2f", 
+                         aspect="auto",
+                         color_continuous_scale='RdYlGn', # Standard finanziario
+                         template="plotly_dark")
+    st.plotly_chart(fig_corr, use_container_width=True)
+
+# --- STEP 3: TECHNICAL DEEP-DIVE (CANDLESTICK + SMA) ---
+if page == "Technical Deep-Dive":
+    st.subheader(f"Technical Analysis: {selected_stock} (Full Year 2025)")
+    st.markdown(f"Detailed view of price action with a **20-day Moving Average** to smooth out volatility.")
+
+    # Estraiamo i dati OHLC specifici per il ticker selezionato dal 'full_data' dello Step 1
+    # Nota: full_data ha un MultiIndex, quindi accediamo con (Metrica, Ticker)
+    df_ticker = pd.DataFrame({
+        'Open': full_data['Open'][selected_stock],
+        'High': full_data['High'][selected_stock],
+        'Low': full_data['Low'][selected_stock],
+        'Close': full_data['Close'][selected_stock]
+    })
+
+    # Calcolo della Media Mobile a 20 giorni (SMA20)
+    df_ticker['SMA20'] = df_ticker['Close'].rolling(window=20).mean()
+
+    # Creazione del grafico Candlestick con Plotly Graph Objects
+    fig_candle = go.Figure()
+
+    # 1. Aggiunta delle Candele
+    fig_candle.add_trace(go.Candlestick(
+        x=df_ticker.index,
+        open=df_ticker['Open'],
+        high=df_ticker['High'],
+        low=df_ticker['Low'],
+        close=df_ticker['Close'],
+        name='Price Action'
+    ))
+
+    # 2. Aggiunta della Media Mobile (Coerenza visiva con il Deep Blue del portfolio)
+    fig_candle.add_trace(go.Scatter(
+        x=df_ticker.index,
+        y=df_ticker['SMA20'],
+        line=dict(color='#084594', width=2),
+        name='20-day Moving Average'
+    ))
+
+    # Styling professionale "Dark Terminal"
+    fig_candle.update_layout(
+        template="plotly_dark",
+        xaxis_rangeslider_visible=False, # Pulizia visiva
+        yaxis_title="Stock Price (USD)",
+        xaxis_title="2025 Timeline",
+        height=600,
+        margin=dict(l=0, r=0, t=30, b=0),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+
+    st.plotly_chart(fig_candle, use_container_width=True)
+
+    # Sidebar Insights (Aggiunta di dati dinamici sulla sidebar)
+    st.sidebar.divider()
+    st.sidebar.write(f"**{selected_stock} Stats:**")
+    st.sidebar.write(f"Max Price: ${df_ticker['High'].max():.2f}")
+    st.sidebar.write(f"Min Price: ${df_ticker['Low'].min():.2f}")
+    st.sidebar.write(f"Volatility (Daily): {returns[selected_stock].std()*100:.2f}%")
+
+# --- FOOTER ---
+st.divider()
+st.caption("Final Project for Data Analytics Portfolio 2025. All market data is real and fetched via yfinance API.")
