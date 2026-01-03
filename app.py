@@ -1,51 +1,44 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
 import plotly.express as px
 
-st.set_page_config(page_title="2025 Real Market Insights", layout="wide")
-st.title("📈 2025 REAL Global Investment Dashboard")
-st.markdown("This dashboard uses live historical data for the fiscal year 2025.")
+# Configurazione Dashboard Professionale
+st.set_page_config(page_title="2025 Alpha Terminal", layout="wide", initial_sidebar_state="expanded")
 
-# --- DOWNLOAD DATI REALI ---
+# Custom CSS per un look "Bloomberg Terminal"
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; color: white; }
+    stMetric { background-color: #1e2130; border-radius: 10px; padding: 15px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.title("🚀 2025 AI-Sector Risk-Reward Terminal")
+st.markdown("Advanced analytics for the Magnificent Seven during the 2025 Fiscal Year.")
+
+# --- STEP 1: DATA ENGINE ---
 @st.cache_data
-def get_real_data():
-    # NVDA = Nvidia, GC=F = Gold Futures, SPY = S&P 500 ETF
-    assets = {"NVIDIA": "NVDA", "Gold": "GC=F", "S&P 500": "SPY"}
-    df_raw = yf.download(list(assets.values()), start="2025-01-01", end="2025-12-31")['Close']
+def load_financial_data():
+    tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA"]
+    # Scarichiamo dati giornalieri reali per tutto il 2025
+    data = yf.download(tickers, start="2025-01-01", end="2025-12-31")
     
-    # Rinominiamo le colonne per chiarezza
-    df_raw = df_raw.rename(columns={v: k for k, v in assets.items()})
+    # Gestione MultiIndex e pulizia
+    if 'Adj Close' in data.columns:
+        prices = data['Adj Close']
+    else:
+        prices = data['Close']
     
-    # Normalizzazione a base 100 per confronto equo
-    df_norm = (df_raw / df_raw.iloc[0] * 100)
-    return df_norm.reset_index()
+    # Calcolo rendimenti giornalieri
+    returns = prices.pct_change().dropna()
+    return prices, returns, data
 
-df = get_real_data()
+prices, returns, full_data = load_financial_data()
 
-# --- SIDEBAR ---
-selected_assets = st.sidebar.multiselect(
-    "Select Assets:", options=['NVIDIA', 'Gold', 'S&P 500'], 
-    default=['NVIDIA', 'Gold', 'S&P 500']
-)
-
-# --- CHART ---
-if selected_assets:
-    fig = px.line(df, x='Date', y=selected_assets, 
-                  title="2025 Growth of $100 (Real Market Data)",
-                  template="plotly_white",
-                  color_discrete_map={'NVIDIA': '#084594', 'Gold': '#ef3b2c', 'S&P 500': '#737373'})
-    
-    fig.update_layout(hovermode="x unified", yaxis_title="Normalized Price (Base 100)")
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Performance finale reale
-    st.subheader("Final 2025 Performance")
-    cols = st.columns(len(selected_assets))
-    for i, asset in enumerate(selected_assets):
-        total_ret = df[asset].iloc[-1] - 100
-        cols[i].metric(asset, f"{df[asset].iloc[-1]:.2f}", f"{total_ret:.2f}%")
-else:
-    st.warning("Please select an asset.")
-
-st.info("Source: Real-time data fetched from Yahoo Finance API (yfinance).")
+# --- SIDEBAR DI NAVIGAZIONE ---
+st.sidebar.header("Terminal Controls")
+page = st.sidebar.radio("Select View:", ["Market Overview", "Risk-Reward Analysis", "Technical Deep-Dive"])
+selected_stock = st.sidebar.selectbox("Focus Stock:", prices.columns)
